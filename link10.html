@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Link Hub with Thumbnails</title>
+<style>
+  :root {
+    --bg: #f7f7f7;
+    --text: #333;
+    --card-bg: #fff;
+    --header-bg: #6200ea;
+    --btn-bg: #6200ea;
+    --btn-hover: #4b00b5;
+    --selected-bg: #ffe082;
+  }
+  body.dark {
+    --bg: #121212;
+    --text: #f0f0f0;
+    --card-bg: #1e1e1e;
+    --header-bg: #222;
+    --btn-bg: #bb86fc;
+    --btn-hover: #985eff;
+    --selected-bg: #ff8a65;
+  }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.5s, color 0.5s;
+    overflow-x: hidden;
+  }
+  canvas#particles {
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    z-index:-1;
+  }
+  header {
+    background: var(--header-bg);
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+    font-size: 1.2rem;
+    transition: background 0.5s;
+  }
+  #searchBox {
+    width: 90%;
+    margin: 10px auto;
+    display: block;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    transition: background 0.5s, color 0.5s;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  #linkList {
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    padding: 0;
+    margin: 0;
+  }
+  .link-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin: 8px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    background: var(--card-bg);
+    transition: background 0.5s, transform 0.2s, box-shadow 0.3s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeIn 0.6s forwards;
+  }
+  .link-item.selected {
+    background-color: var(--selected-bg);
+  }
+  .link-item:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+  .link-item:active {
+    transform: scale(0.97);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .thumb { width: 60px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px; }
+  .link-title { flex: 1; font-size: 0.95rem; word-break: break-all; }
+  .open-btn {
+    padding: 6px 10px; border: none; border-radius: 6px;
+    background: var(--btn-bg); color: #fff; cursor: pointer;
+    font-size: 0.8rem; transition: background 0.3s;
+  }
+  .open-btn:hover { background: var(--btn-hover); }
+  #backToTop, #scrollDown, #themeToggle {
+    display: none; position: fixed; bottom: 20px; right: 20px;
+    background: var(--btn-bg); color: #fff; border: none;
+    border-radius: 50%; width: 50px; height: 50px;
+    font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    transition: opacity 0.4s ease, background 0.3s;
+    opacity: 0; touch-action: none;
+  }
+  #backToTop.show, #scrollDown.show, #themeToggle.show { display: block; opacity: 1; }
+  #scrollDown { right: 80px; }
+  #themeToggle { right: 140px; }
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<header>📚 Link Hub with Thumbnails</header>
+<input type="text" id="searchBox" placeholder="Search links..." />
+<ul id="linkList"></ul>
+<button id="backToTop">⬆</button>
+<button id="scrollDown">⬇</button>
+<button id="themeToggle">🌙</button>
+
+<script>
+// Links
+const LINKS = [
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'YouTube Video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+  { title: 'Instagram Reel', url: 'https://www.instagram.com/p/Cxyz123/' },
+  { title: 'Twitter Post', url: 'https://twitter.com/jack/status/20' },
+  { title: 'Facebook Video', url: 'https://www.facebook.com/watch/?v=10153231379946729' },
+  { title: 'ChatGPT', url: 'https://chat.openai.com' }
+];
+
+// Particle System
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particlesArray = [];
+
+function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function createParticles(){
+  particlesArray = [];
+  for(let i=0;i<100;i++){
+    particlesArray.push({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height,
+      radius: Math.random()*3+1,
+      speedX: (Math.random()-0.5)*0.5,
+      speedY: (Math.random()-0.5)*0.5,
+      color: document.body.classList.contains('dark') ? 'white':'rgba(0,150,255,0.6)'
+    });
+  }
+}
+createParticles();
+
+let repelPoint = null;
+
+function animateParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particlesArray.forEach(p=>{
+    p.x += p.speedX; p.y += p.speedY;
+    if(p.x<0||p.x>canvas.width)p.speedX*=-1;
+    if(p.y<0||p.y>canvas.height)p.speedY*=-1;
+
+    // Repel particles from clicked link
+    if(repelPoint){
+      const dx = p.x - repelPoint.x;
+      const dy = p.y - repelPoint.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if(dist < 100){
+        const angle = Math.atan2(dy, dx);
+        const force = (100 - dist)/100;
+        p.x += Math.cos(angle) * force * 10;
+        p.y += Math.sin(angle) * force * 10;
+      }
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+    ctx.fillStyle=p.color;
+    ctx.fill();
+  });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+function triggerRepel(x, y){
+  repelPoint = {x, y};
+  setTimeout(()=>{ repelPoint = null; }, 300);
+}
+
+// Thumbnails
+function getThumbnail(url){
+  try{
+    if(url.includes('youtube.com/watch?v=')){ const id = new URL(url).searchParams.get('v'); return `https://img.youtube.com/vi/${id}/hqdefault.jpg`; }
+    if(url.includes('youtu.be/')){ const id = url.split('youtu.be/')[1].split(/[?&]/)[0]; return `https://img.youtube.com/vi/${id}/hqdefault.jpg`; }
+    if(url.includes('instagram.com/p/')){ const shortcode = url.split('/p/')[1].split('/')[0]; return `https://www.instagram.com/p/${shortcode}/media/?size=l`; }
+    if(url.includes('twitter.com/')){ return 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png'; }
+    if(url.includes('facebook.com/')){ return 'https://www.facebook.com/images/fb_icon_325x325.png'; }
+  }catch(e){}
+  return 'https://via.placeholder.com/60x40?text=🔗';
+}
+
+const listEl=document.getElementById('linkList');
+const backToTopBtn=document.getElementById('backToTop');
+const scrollDownBtn=document.getElementById('scrollDown');
+const themeToggleBtn=document.getElementById('themeToggle');
+let selectedItem = null;
+
+function renderLinks(filter=''){
+  listEl.innerHTML='';
+  LINKS.filter(link => link.title.toLowerCase().includes(filter.toLowerCase()) || link.url.toLowerCase().includes(filter.toLowerCase()))
+    .forEach((link,i)=>{
+      const li = document.createElement('li');
+      li.className='link-item';
+      li.style.animationDelay=`${i*0.05}s`;
+      const img = document.createElement('img'); img.className='thumb'; img.src=getThumbnail(link.url);
+      li.appendChild(img);
+      const span=document.createElement('span'); span.className='link-title'; span.textContent=link.title;
+      li.appendChild(span);
+      const btn=document.createElement('button'); btn.className='open-btn'; btn.textContent='Open';
+      li.appendChild(btn);
+
+      li.onclick=(e)=>{
+        if(e.target!==btn){
+          if(selectedItem) selectedItem.classList.remove('selected');
+          li.classList.add('selected');
+          selectedItem=li;
+          const rect = li.getBoundingClientRect();
+          triggerRepel(rect.left + rect.width/2, rect.top + rect.height/2);
+          window.open(link.url,'_blank');
+        }
+      }
+      listEl.appendChild(li);
+    });
+}
+
+document.getElementById('searchBox').addEventListener('input',(e)=>{ renderLinks(e.target.value); });
+
+listEl.addEventListener('scroll',()=>{
+  if(listEl.scrollTop>200) backToTopBtn.classList.add('show'); else backToTopBtn.classList.remove('show');
+  if(listEl.scrollTop<listEl.scrollHeight-listEl.clientHeight-200) scrollDownBtn.classList.add('show'); else scrollDownBtn.classList.remove('show');
+  themeToggleBtn.classList.add('show');
+});
+
+backToTopBtn.addEventListener('click',()=>{ listEl.scrollTo({top:0,behavior:'smooth'}); });
+scrollDownBtn.addEventListener('click',()=>{ listEl.scrollTo({top:listEl.scrollHeight,behavior:'smooth'}); });
+
+themeToggleBtn.addEventListener('click',()=>{
+  document.body.classList.toggle('dark');
+  const darkMode=document.body.classList.contains('dark');
+  themeToggleBtn.textContent=darkMode?'🌞':'🌙';
+  localStorage.setItem('theme',darkMode?'dark':'light');
+  launchConfetti();
+  createParticles();
+});
+
+if(localStorage.getItem('theme')==='dark'){ document.body.classList.add('dark'); themeToggleBtn.textContent='🌞'; createParticles(); }
+
+function launchConfetti(){
+  for(let i=0;i<30;i++){
+    const conf=document.createElement('div');
+    conf.style.position='fixed'; conf.style.width='8px'; conf.style.height='8px';
+    conf.style.background=`hsl(${Math.random()*360},100%,50%)`;
+    conf.style.left=Math.random()*window.innerWidth+'px';
+    conf.style.top='-10px';
+    conf.style.opacity=1;
+    conf.style.transition='transform 2s linear, top 2s linear, opacity 2s';
+    document.body.appendChild(conf);
+    setTimeout(()=>{ conf.style.top=window.innerHeight+'px'; conf.style.transform=`rotate(${Math.random()*360}deg)`; conf.style.opacity=0; },50);
+    setTimeout(()=>conf.remove(),2200);
+  }
+}
+
+function makeDraggable(btn,key){
+  let isDragging=false,offsetX,offsetY;
+  const saved=localStorage.getItem(key);
+  if(saved){ const {x,y}=JSON.parse(saved); btn.style.left=x+'px'; btn.style.top=y+'px'; btn.style.right='auto'; btn.style.bottom='auto'; }
+  btn.addEventListener('mousedown',startDrag); btn.addEventListener('touchstart',startDrag);
+  function startDrag(e){
+    isDragging=true;
+    const rect=btn.getBoundingClientRect();
+    offsetX=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+    offsetY=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+    document.addEventListener('mousemove',onDrag); document.addEventListener('mouseup',stopDrag);
+    document.addEventListener('touchmove',onDrag); document.addEventListener('touchend',stopDrag);
+  }
+  function onDrag(e){
+    if(!isDragging) return;
+    const x=(e.touches?e.touches[0].clientX:e.clientX)-offsetX;
+    const y=(e.touches?e.touches[0].clientY:e.clientY)-offsetY;
+    btn.style.left=x+'px'; btn.style.top=y+'px'; btn.style.right='auto'; btn.style.bottom='auto';
+  }
+  function stopDrag(){
+    if(!isDragging) return;
+    isDragging=false;
+    document.removeEventListener('mousemove',onDrag); document.removeEventListener('mouseup',stopDrag);
+    document.removeEventListener('touchmove',onDrag); document.removeEventListener('touchend',stopDrag);
+    const rect=btn.getBoundingClientRect();
+    localStorage.setItem(key,JSON.stringify({x:rect.left,y:rect.top}));
+  }
+}
+makeDraggable(backToTopBtn,'backToTopPos');
+makeDraggable(scrollDownBtn,'scrollDownPos');
+makeDraggable(themeToggleBtn,'themeTogglePos');
+
+renderLinks();
+themeToggleBtn.classList.add('show');
+</script>
+</body>
+</html>
